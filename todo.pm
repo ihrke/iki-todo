@@ -12,6 +12,11 @@
 #  * [[!todolist]] calls add_depends( page, '*') 
 #       + this ensures, that whenever an existing todo is modified or a new todo
 #         is added, the todolist is updated
+#
+#  * items in wikistate are arraned as follows:
+#       + wikistate{'todo'}{'open'}{'todo text'}=[page1, page2, ...]
+#       + wikistate{'todo'}{'done'}{'todo text'}=[page1, page2, ...]
+#                                                  
 
 package IkiWiki::Plugin::todo;
 use warnings;
@@ -23,33 +28,9 @@ use Data::Dumper;
 #use Text::Format;
 
 sub import {
-	 hook(type => "scan", id => "todo", call => \&scan_for_todos);
-	 hook(type => "needsbuild", id => "todo", call => \&todo_needsbuild);
-
     hook(type => "getsetup", id => "todo", call => \&getsetup);
     hook(type => "preprocess", id => "todo", call => \&todo_preprocess);
     hook(type => "preprocess", id => "todolist", call => \&todolist_preprocess);
-}
-
-sub todo_needsbuild {
-	 # careful with sequence:
-	 #  * first the todo-pages must be built and the hash be constructed
-	 #  * then the todo-list can be compiled
-	 my $listref=shift;
-	 debug(  Dumper( @{ $listref } ) );
-	 foreach my $f (@{ $listref }){
-		  my $c = readfile($config{'srcdir'}."/".$f);
-	 }
-}
-
-
-sub scan_for_todos {
-	 my %params=@_;
-	 my $p=$params{'page'} ;
-	 my $c=$params{'content'} ;
-	 while( $c =~ /\[\[\!todo (.*?)\]\]/g ){
-		  debug(">>TODO:".$p."-'".$1."'\n");
-	 }
 }
 
 sub getsetup () {
@@ -79,19 +60,29 @@ sub todo_preprocess {
 
 	 if( $type eq 'todo' ){
 		  $text=$params{text} or die "need text for a todo item";
-		  unless( exists $wikistate{'todo'}{$page} ){
-				$wikistate{'todo'}{$page}=[];
+		  unless( exists $wikistate{'todo'}{'open'}{$text} ){
+				$wikistate{'todo'}{'open'}{$text}=[];
 		  }
-		  my %h=map { $_ => 1 } @{ $wikistate{'todo'}{$page} };
-		  unless( exists $h{$text} ){
-				push( @{ $wikistate{'todo'}{$page} }, $text );
+		  my %h=map { $_ => 1 } @{ $wikistate{todo}{open}{$text} };
+		  unless( exists $h{$page} ){
+				push( @{ $wikistate{todo}{open}{$text} }, $page );
 		  }
-		  #@{ $wikistate{'todo'}{$page} }=uniq( @{ $wikistate{'todo'}{$page} } );
 
 		  $output.="<div id='todo_open'>".$text."</div>";
 	 } elsif ( $type eq 'done' ){
 		  $text=$params{text} or die "need text for a todo item";
+		  unless( exists $wikistate{'todo'}{'done'}{$text} ){
+				$wikistate{'todo'}{'done'}{$text}=[];
+		  }
+		  my %h=map { $_ => 1 } @{ $wikistate{todo}{done}{$text} };
+		  unless( exists $h{$page} ){
+				push( @{ $wikistate{todo}{done}{$text} }, $page );
+		  }
 		  
+		  %h=map { $_ => 1 } keys %{ $wikistate{todo}{open} };
+		  if( exists $h{$text} ){
+				delete $wikistate{todo}{open}{$text};
+		  }
 		  $output.="<div id='todo_done'>".$text."</div>";
 	 } 
 
@@ -110,15 +101,14 @@ sub todolist_preprocess {
 	 }
 
 	 if( $type eq 'list' ){
-		  foreach my $p (keys %{ $wikistate{'todo'} } ) {
-				foreach my $txt (@{ $wikistate{'todo'}{$p} }) {
-					 $output .= "* [[".$txt."|".$p."]]\n";
+		  foreach my $txt (keys %{ $wikistate{'todo'}{'open'} } ) {
+				foreach my $p (@{ $wikistate{'todo'}{'open'}{$txt} }) {
+					 $output .= "* ".$txt." ([[".$p."]])\n";
 				}
 		  }
 	 }
 
 	 debug( Dumper($wikistate{'todo'}));
-	 debug(">> todo: adding everything as dependency");
 	 add_depends($params{page}, '*');
 
 	 return $output;
