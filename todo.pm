@@ -11,8 +11,19 @@ use Data::Dumper;
 my %todos; # holds page=>[ todo1, todo2, ... ]
 
 sub import {
+	 hook(type => "scan", id => "todo", call => \&scan_for_todos);
     hook(type => "getsetup", id => "todo", call => \&getsetup);
     hook(type => "preprocess", id => "todo", call => \&todo_preprocess);
+}
+
+
+sub scan_for_todos {
+	 my %params=@_;
+	 my $p=$params{'page'} ;
+	 my $c=$params{'content'} ;
+	 while( $c =~ /\[\[\!todo (.*?)\]\]/g ){
+		  debug(">>TODO:".$p."-'".$1."'\n");
+	 }
 }
 
 sub getsetup () {
@@ -29,18 +40,32 @@ sub getsetup () {
 sub todo_preprocess {
     my %params=@_;
 	 my $page=$params{destpage}; # this is the current page
-	 my $output_format="todo";
+	 my $type="todo";
+	 my $text="";
+	 my $output="";
 
 	 if( exists $params{type} ){
-		  $output_format=$params{type};
+		  $type=$params{type};
 	 }
 
-	 unless( exists @todos{$page} ){
-		  @todos{$page}=();
+	 if( $type eq 'todo' ){
+		  $text=$params{text} or die "need text for a todo item";
+		  unless( exists $todos{$page} ){
+				$todos{$page}=[];
+		  }
+		  push( @{ $todos{$page} }, $text );
+		  $output.="<div id='todo_open'>".$text."</div>";
+	 } elsif ( $type eq 'done' ){
+		  $text=$params{text} or die "need text for a todo item";
+		  $output.="<div id='todo_done'>".$text."</div>";
+	 } elsif( $type eq 'list' ){
+		  foreach my $key ( keys %todos ) {
+				foreach my $el (@{ $todos{$key} }) {
+					 $output .= "* [[".$el."|".$key."]]\n";
+				}
+		  }
 	 }
-	 push( @todos{$page}, $text );
 
-	 $output="<div id='todo'>".$text."</div>";
 
 	 return $output;
 }
