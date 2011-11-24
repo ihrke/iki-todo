@@ -110,7 +110,7 @@ sub todolist_preprocess {
 		  }
 	 }
 
-	 debug( Dumper($wikistate{'todo'}));
+	 #debug( Dumper($wikistate{'todo'}));
 	 add_depends($params{page}, '*');
 
 	 return $output;

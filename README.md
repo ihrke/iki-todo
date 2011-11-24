@@ -12,6 +12,12 @@ directive for [ikiwiki].
 
 [ikiwiki]: http://ikiwiki.info/
 
+**Incomplete! still need to do**
+
+* pagelist
+* includedone
+
+
 **Features:**
 
 * todo/done items
