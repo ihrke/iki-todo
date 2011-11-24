@@ -3,28 +3,57 @@
 This [ikiwiki]-plugin provides a 
   
     [[!todo ]]
-	 
+
+and a
+
+    [[!todolist]]
+
 directive for [ikiwiki]. 
 
 [ikiwiki]: http://ikiwiki.info/
 
-Features:
+**Features:**
 
 * todo/done items
-* listings
+* different listings
+* handles the case when todo-items are inlined in other pages
 
-## Requirements ##
 
 ## Arguments ##
 
-* type is one of 
-    + todo - a new todo item, requires text=
-	+ done - a completed todo item, requires text=
-	+ list - a bullet-list of all todos linked to their pages
-	+ pagelist - a tree-list of all todos by page
+* todo-directive:
+    + type is one of 
+        - todo - a new todo item, requires text=
+		- done - a completed todo item, requires text=
+* todolist-directive
+    + type is one of
+	    - list- a bullet-list of all todos linked to their page(s)
+		- pagelist - a tree-list of all todos by page
+	+ includedone - when present, list also done items 
 * when a text= argument is given, type=todo is assumed unless
   otherwise specified
   
+## Notes ##
+
+* todos are wrapped in &gt;div id='todo_open'&lt; containers
+* done items are wrapped in &gt;div id='todo_done'&lt; containers
+* possible css:
+
+        #todo_open {
+        	 color: red;
+        }
+        
+        #todo_open:before {
+        	 content: "TODO: ";
+        }
+        
+        #todo_done {
+        	 color: green;
+        }
+        
+        #todo_done:before {
+        	 content: "Done: ";
+        }
 
 ## Examples ##
 
@@ -38,8 +67,8 @@ and a completed todo
 
 and print the list as linked bullets
 
-	[[!todo type=list]]
+	[[!todolist]]
 
 or tree-like according to page
 
-	[[!todo type=pagelist]]
+	[[!todolist type=pagelist]]

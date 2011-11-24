@@ -102,9 +102,11 @@ sub todolist_preprocess {
 
 	 if( $type eq 'list' ){
 		  foreach my $txt (keys %{ $wikistate{'todo'}{'open'} } ) {
-				foreach my $p (@{ $wikistate{'todo'}{'open'}{$txt} }) {
-					 $output .= "* ".$txt." ([[".$p."]])\n";
+				my @l = @{ $wikistate{'todo'}{'open'}{$txt} };
+				foreach my $k (@l){
+					 $k = "[[".$k."]]";
 				}
+				$output .= "* ".$txt." (".join(", ",@l ).")\n";
 		  }
 	 }
 
