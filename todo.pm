@@ -6,7 +6,12 @@
 #  page that has a [[!todolist]] directive is rebuilt whenever any
 #  page changes.
 #
-#
+# Policy:
+#  * every [[!todo]] directive registers in the $wikistate{'todo'} variable
+#  * the [[!todolist]] preprocess fct displays todos based on the wikistate
+#  * [[!todolist]] calls add_depends( page, '*') 
+#       + this ensures, that whenever an existing todo is modified or a new todo
+#         is added, the todolist is updated
 
 package IkiWiki::Plugin::todo;
 use warnings;
@@ -16,8 +21,6 @@ use IkiWiki 3.00;
 use Data::Dumper;
 
 #use Text::Format;
-
-my %todos; # holds page=>[ todo1, todo2, ... ]
 
 sub import {
 	 hook(type => "scan", id => "todo", call => \&scan_for_todos);
@@ -37,8 +40,6 @@ sub todo_needsbuild {
 	 foreach my $f (@{ $listref }){
 		  my $c = readfile($config{'srcdir'}."/".$f);
 	 }
-
-	 
 }
 
 
@@ -61,6 +62,9 @@ sub getsetup () {
 	 },
 }
 
+sub uniq {
+    return keys %{{ map { $_ => 1 } @_ }};
+}
 
 sub todo_preprocess {
     my %params=@_;
@@ -75,18 +79,19 @@ sub todo_preprocess {
 
 	 if( $type eq 'todo' ){
 		  $text=$params{text} or die "need text for a todo item";
-		  unless( exists $todos{$page} ){
-				$todos{$page}=[];
-		  }
-		  push( @{ $todos{$page} }, $text );
 		  unless( exists $wikistate{'todo'}{$page} ){
 				$wikistate{'todo'}{$page}=[];
 		  }
-		  push( @{ $wikistate{'todo'}{$page} }, $text );
+		  my %h=map { $_ => 1 } @{ $wikistate{'todo'}{$page} };
+		  unless( exists $h{$text} ){
+				push( @{ $wikistate{'todo'}{$page} }, $text );
+		  }
+		  #@{ $wikistate{'todo'}{$page} }=uniq( @{ $wikistate{'todo'}{$page} } );
 
 		  $output.="<div id='todo_open'>".$text."</div>";
 	 } elsif ( $type eq 'done' ){
 		  $text=$params{text} or die "need text for a todo item";
+		  
 		  $output.="<div id='todo_done'>".$text."</div>";
 	 } 
 
@@ -105,14 +110,15 @@ sub todolist_preprocess {
 	 }
 
 	 if( $type eq 'list' ){
-		  foreach my $key ( keys %todos ) {
-				foreach my $el (@{ $todos{$key} }) {
-					 $output .= "* [[".$el."|".$key."]]\n";
+		  foreach my $p (keys %{ $wikistate{'todo'} } ) {
+				foreach my $txt (@{ $wikistate{'todo'}{$p} }) {
+					 $output .= "* [[".$txt."|".$p."]]\n";
 				}
 		  }
 	 }
 
-	 debug(">> todo: adding dependency");
+	 debug( Dumper($wikistate{'todo'}));
+	 debug(">> todo: adding everything as dependency");
 	 add_depends($params{page}, '*');
 
 	 return $output;
